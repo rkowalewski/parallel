@@ -1,15 +1,12 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
-
-#ifdef _OPENMP
 #include <omp.h>
-#endif
 
 #define MYTIMEVAL( tv_ )      \
   ((tv_.tv_sec)+(tv_.tv_usec)*1.0e-6)
 
-#define MYTIMESTAMP( time_ ) \       
+#define MYTIMESTAMP( time_ ) \
 {                             \
   static struct timeval tv;   \
   gettimeofday( &tv, NULL );  \
@@ -17,6 +14,17 @@
 }
 
 #define NUM_ITERATIONS 1000000
+
+int isprime(int p)
+{
+  int d;
+  for (d = 2; d < p; d++)
+  {
+    if (p % d == 0)
+      return 0;
+  }
+  return 1;
+}
 
 int main(int argc, char *argv[])
 {
@@ -41,13 +49,3 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-int isprime(int p)
-{
-  int d;
-  for (d = 2; d < p; d++)
-  {
-    if (p % d == 0)
-      return 0;
-  }
-  return 1;
-}

@@ -6,7 +6,7 @@
 
 #define N 1000
 
-void prefixsum_inplace(int* x, int n)
+void prefixsum(int* x, int n)
 {
 
   int ithread;
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     x[i] = i;
   }
 
-  prefixsum_inplace(x, N);
+  prefixsum(x, N);
 
   for (i = 0; i < N; i++)
   {
