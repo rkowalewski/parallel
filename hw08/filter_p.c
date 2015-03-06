@@ -213,6 +213,8 @@ int main(int argc, char* argv[])
     }
   }
 
+  double t = -MPI_Wtime();
+
   // create east-west type
   MPI_Datatype north_south_type;
   MPI_Type_contiguous(bx, MPI_UNSIGNED_CHAR, &north_south_type);
@@ -326,6 +328,8 @@ int main(int argc, char* argv[])
     }
   }
 
+  t += MPI_Wtime();
+
   //Create array type to send back the smoothed subarrays without ghost cells
   MPI_Datatype array_gather_type;
   sizes[0] = by + 2;
@@ -344,10 +348,11 @@ int main(int argc, char* argv[])
 
   if (!rank)
   {
+    printf("processing this image took %1.2f seconds\n", t);
     write_pgm(outfile, array, sizex, sizey);
     fclose(outfile);
     free(array);
-   // print_matrix(rank, array, sizey, sizex);
+    // print_matrix(rank, array, sizey, sizex);
   }
 
   free(subarray);
