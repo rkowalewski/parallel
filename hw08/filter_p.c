@@ -79,20 +79,6 @@ void draw_circle(unsigned char *v, int sizex, int sizey,
   }
 }
 
-void print_matrix(int rank, unsigned char *matrix, int m, int n)
-{
-  printf("Matrix for process %d------------\n", rank);
-
-  for (int i = 0; i < m; i++)
-  {
-    for (int j = 0; j < n; j++)
-    {
-      printf(" %u ", matrix[i * n + j]);
-    }
-    printf("|\n");
-  }
-}
-
 int main(int argc, char* argv[])
 {
   unsigned char* array = NULL;
@@ -114,14 +100,7 @@ int main(int argc, char* argv[])
   if (rank == 0)
   {
     array = malloc(sizex * sizey * sizeof(unsigned char));
-    /*
-      for (int i = 0; i < sizex * sizey; i++)
-      {
-        array[i] = i + 1;
-      }
 
-      print_matrix(rank, array, sizey, sizex);
-    */
     for (int i = 0; i < sizex * sizey; i++)
       array[i] = 255;
 
@@ -352,7 +331,6 @@ int main(int argc, char* argv[])
     write_pgm(outfile, array, sizex, sizey);
     fclose(outfile);
     free(array);
-    // print_matrix(rank, array, sizey, sizex);
   }
 
   free(subarray);
