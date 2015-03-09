@@ -1,7 +1,11 @@
 #include "./stencil.h"
 
-void calc_stencil(unsigned char *array, int sizex, int sizey, int nprocs, int rank, int ndims)
+void calc_stencil(unsigned char *array, int sizex, int sizey, int niter, int ndims)
 {
+  int rank, nprocs;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   //split into 4x4 domain
   int by, bx, px, py;
   //Get Dimensions
@@ -135,7 +139,7 @@ void calc_stencil(unsigned char *array, int sizex, int sizey, int nprocs, int ra
     eastColPtr = westColPtr;
   }
 
-  for (iter = 0; iter < NITER; iter++)
+  for (iter = 0; iter < niter; iter++)
   {
     //start halo communication
     MPI_Isend(&aold[ind(1, by)] /* south */, 1, north_south_type, south, TAG_EXCHANGE_GHOSTS, cart_comm, &reqs[0]);
@@ -182,7 +186,7 @@ void calc_stencil(unsigned char *array, int sizex, int sizey, int nprocs, int ra
       }
     }
 
-    if (iter < NITER - 1)
+    if (iter < niter - 1)
     {
       //swap arrays
       tmp = anew;

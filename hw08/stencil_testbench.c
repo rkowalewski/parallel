@@ -52,9 +52,8 @@ int main(int argc, char* argv[])
     niter = args[1];
   }
 
-
   double t = -MPI_Wtime();
-  calc_stencil(array, sizex, sizey, size, rank, 2);
+  if (niter > 0) calc_stencil(array, sizex, sizey, niter, 2);
   t += MPI_Wtime();
 
   if (!rank)
