@@ -1,126 +1,12 @@
-#include <mpi.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "./stencil.h"
 
-#define TAG_EXCHANGE_GHOSTS 9
-void write_pgm(FILE *f, unsigned char *v, int sizex, int sizey)
+void calc_stencil(unsigned char *array, int sizex, int sizey, int nprocs, int rank, int ndims)
 {
-  int i, j;
-
-  fprintf(f, "P2\n");
-  fprintf(f, "%d %d\n", sizex, sizey);
-  fprintf(f, "%d\n", 255);
-
-  for (i = 0; i < sizey; i++ )
-  {
-    for (j = 0; j < sizex; j++ )
-    {
-      fprintf(f, " %d", (unsigned int)v[i * sizex + j]);
-    }
-    fprintf(f, "\n");
-  }
-}
-
-#define setpixel(x_,y_)           \
-  {               \
-    int xx,yy;              \
-    xx=(x_)%sizex;            \
-    yy=(y_)%sizey;            \
-    xx=(xx+sizex)%sizex;          \
-    yy=(yy+sizey)%sizey;          \
-    v[yy*sizex+xx]=1;           \
-  }
-
-void smooth(unsigned char *src, unsigned char *dst, int x, int y, int sizex)
-{
-  dst[y * sizex + x] =
-    ( 0.40 * src[y * sizex + x] +
-      0.15 * src[(y - 1) * sizex + x] +
-      0.15 * src[(y + 1) * sizex + x] +
-      0.15 * src[y * sizex + (x + 1)] +
-      0.15 * src[y * sizex + (x - 1)] );
-}
-
-void draw_circle(unsigned char *v, int sizex, int sizey,
-                 int x0, int y0, int r)
-{
-  int f = 1 - r;
-  int ddF_x = 1;
-  int ddF_y = -2 * r;
-  int x = 0;
-  int y = r;
-
-
-  //left, right, upper and lower bound for radius
-  setpixel(x0 - r, y0);
-  setpixel(x0 + r, y0);
-  setpixel(x0  , y0 - r);
-  setpixel(x0  , y0 + r);
-
-  while (x < y)
-  {
-    if (f >= 0)
-    {
-      y--;
-      ddF_y += 2;
-      f += ddF_y;
-    }
-    x++;
-    ddF_x += 2;
-    f += ddF_x;
-    setpixel(x0 + x, y0 + y);
-    setpixel(x0 - x, y0 + y);
-    setpixel(x0 + x, y0 - y);
-    setpixel(x0 - x, y0 - y);
-    setpixel(x0 + y, y0 + x);
-    setpixel(x0 - y, y0 + x);
-    setpixel(x0 + y, y0 - x);
-    setpixel(x0 - y, y0 - x);
-  }
-}
-
-int main(int argc, char* argv[])
-{
-  unsigned char* array = NULL;
-  int sizex, sizey;
-  int niter;
-  FILE *outfile;
-
-  sizex = 1000;
-  sizey = 1000;
-  niter = 20;
-
-  MPI_Init(NULL, NULL);
-
-  int rank, size;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  if (rank == 0)
-  {
-    array = malloc(sizex * sizey * sizeof(unsigned char));
-
-    for (int i = 0; i < sizex * sizey; i++)
-      array[i] = 255;
-
-    outfile = fopen("testimg.pgm", "w");
-
-    draw_circle(array, sizex, sizey, 0, 0, 40);
-    draw_circle(array, sizex, sizey, 0, 0, 30);
-    draw_circle(array, sizex, sizey, 100, 100, 10);
-    draw_circle(array, sizex, sizey, 100, 100, 20);
-    draw_circle(array, sizex, sizey, 100, 100, 30);
-    draw_circle(array, sizex, sizey, 100, 100, 40);
-    draw_circle(array, sizex, sizey, 100, 100, 50);
-  }
-
   //split into 4x4 domain
   int by, bx, px, py;
   //Get Dimensions
-  int ndims = 2;
   int dims[2] = {0, 0};
-  MPI_Dims_create(size, ndims, dims);
+  MPI_Dims_create(nprocs, ndims, dims);
 
   px = dims[0];
   py = dims[1];
@@ -168,12 +54,12 @@ int main(int argc, char* argv[])
   anew = calloc((by + 2) * (bx + 2), sizeof(unsigned char));
 
 
-  int displs[size];
-  int sendcounts[size];
+  int displs[nprocs];
+  int sendcounts[nprocs];
 
   if (rank == 0)
   {
-    for (int r = 0; r < size; r++)
+    for (int r = 0; r < nprocs; r++)
     {
       sendcounts[r] = 1;
       int proc_coords[2];
@@ -191,8 +77,6 @@ int main(int argc, char* argv[])
       aold[row * (bx + 2) + col] = subarray[(row - 1) * bx + (col - 1)];
     }
   }
-
-  double t = -MPI_Wtime();
 
   // create east-west type
   MPI_Datatype north_south_type;
@@ -251,7 +135,7 @@ int main(int argc, char* argv[])
     eastColPtr = westColPtr;
   }
 
-  for (iter = 0; iter < niter; iter++)
+  for (iter = 0; iter < NITER; iter++)
   {
     //start halo communication
     MPI_Isend(&aold[ind(1, by)] /* south */, 1, north_south_type, south, TAG_EXCHANGE_GHOSTS, cart_comm, &reqs[0]);
@@ -298,7 +182,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    if (iter < niter - 1)
+    if (iter < NITER - 1)
     {
       //swap arrays
       tmp = anew;
@@ -306,8 +190,6 @@ int main(int argc, char* argv[])
       aold = tmp;
     }
   }
-
-  t += MPI_Wtime();
 
   //Create array type to send back the smoothed subarrays without ghost cells
   MPI_Datatype array_gather_type;
@@ -325,14 +207,6 @@ int main(int argc, char* argv[])
               array, sendcounts, displs, array_scatter_type,
               0, cart_comm);
 
-  if (!rank)
-  {
-    printf("processing this image took %1.2f seconds\n", t);
-    write_pgm(outfile, array, sizex, sizey);
-    fclose(outfile);
-    free(array);
-  }
-
   free(subarray);
   free(aold);
   free(anew);
@@ -340,9 +214,14 @@ int main(int argc, char* argv[])
   MPI_Type_free(&array_gather_type);
   MPI_Type_free(&north_south_type);
   MPI_Type_free(&west_east_type);
+}
 
-
-  MPI_Finalize();
-
-  return EXIT_SUCCESS;
+void smooth(unsigned char *src, unsigned char *dst, int x, int y, int sizex)
+{
+  dst[y * sizex + x] =
+    ( 0.40 * src[y * sizex + x] +
+      0.15 * src[(y - 1) * sizex + x] +
+      0.15 * src[(y + 1) * sizex + x] +
+      0.15 * src[y * sizex + (x + 1)] +
+      0.15 * src[y * sizex + (x - 1)] );
 }

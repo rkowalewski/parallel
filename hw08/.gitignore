@@ -2,5 +2,5 @@
 a.out
 *.ppm
 *.pgm
-filter
-filter_p
+*.i
+*.o

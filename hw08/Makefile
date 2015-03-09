@@ -1,16 +1,18 @@
-CC=gcc-4.9
-FLAGS=-std=c99
 MPICC=mpicc
+CFLAGS=-std=c99 -Wall -c
+LDFLAGS=-Wall
+SOURCES=stencil_testbench.c stencil.c
+OBJECTS=$(SOURCES:.c=.o)
+EXECUTEABLE=stencil
 
-all :
-	gcc ${FLAGS} -o filter filter.c
-	${MPICC} ${FLAGS} -o filter_p filter_p.c
+all: $(EXECUTEABLE)
+
+$(EXECUTEABLE): $(OBJECTS)
+	$(MPICC) $(LDFLAGS) $(OBJECTS) -o $@
+
+.c.o:	$(SOURCES)
+	$(MPICC) $(CFLAGS) $< -o $@
 
 clean : 
-	rm -f *~
-	rm -f a.out
-	rm -f *.ppm
-	rm -f *.pgm
-	rm -f filter
-	rm -f filter_p
+	rm -f *.pgm *.o $(EXECUTEABLE)
 
